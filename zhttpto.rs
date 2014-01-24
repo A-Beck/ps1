@@ -15,6 +15,8 @@
 use std::io::*;
 use std::io::net::ip::{SocketAddr};
 use std::{str};
+use std::io::buffered::BufferedReader;
+use std::io::File;
 
 static IP: &'static str = "127.0.0.1";
 static PORT:        int = 4414;
@@ -49,9 +51,24 @@ fn main() {
             let mut buf = [0, ..500];
             stream.read(buf);
             let request_str = str::from_utf8(buf);
-            println(format!("Received request :\n{:s}", request_str));
 
-            unsafe {
+            let mut line1 = "";
+
+            for str in request_str.split('\n'){ // get the first line
+                line1 = str.clone();
+                break;
+            }
+
+            
+            let mut path = "";
+
+            let temp: ~[&str] = line1.split(' ').collect();
+            path = temp[1].clone(); // this gets the path
+
+            let file_content = readFile(path);
+            println!("this is from file_content: {:s}",file_content);
+
+            unsafe {    // so we can increment count 'illegally'
 
             count += 1;
 
@@ -64,7 +81,10 @@ fn main() {
                  </style></head>
                  <body>
                  <h1>Greetings, Krusty! Total hits = {:d} </h1>
-                 </body></html>\r\n", count);
+                 <p> reading from file ... <br/>
+                 {:s}
+                </p>
+                 </body></html>\r\n", count, file_content);
 
             stream.write(response.as_bytes());
             println!("Connection terminates");
@@ -72,3 +92,33 @@ fn main() {
         }
     }
 }   
+
+fn readFile(x: &str) -> ~str {
+
+    println(x);   // for error checking
+
+    let path = Path::new(x.slice_from(1));  // gets rid of leading '/'
+    
+
+    match (path.exists(), path.is_file()){
+        
+        (true,true) => {  
+            println("this is a file!");
+            match File::open(&Path::new(path)) {
+                Some(file) => {
+                    let mut reader = BufferedReader::new(file);
+                    let input = reader.read_to_str();
+                    println!("{:s}", input);
+                    return input;
+
+                }
+
+                None =>{~"Opening file failed!"}
+            }
+
+        }
+        (false,_) => {~"The item requested is not a file"}
+        (_,false) => {~"The item requested is not a file"}
+    }
+
+}
