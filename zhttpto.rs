@@ -61,33 +61,41 @@ fn main() {
 
             
             let mut path = "";
+            println(line1);
 
             let temp: ~[&str] = line1.split(' ').collect();
             path = temp[1].clone(); // this gets the path
 
             let file_content = readFile(path);
-            println!("this is from file_content: {:s}",file_content);
 
             unsafe {    // so we can increment count 'illegally'
 
             count += 1;
 
-            let response: ~str = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
-                 <doctype !html><html><head><title>Hello, Rust!</title>
-                 <style>body \\{ background-color: \\#111; color: \\#FFEEAA \\}
-                        h1 \\{ font-size:2cm; text-align: center; color: black; text-shadow: 0 0 4mm red\\}
-                        h2 \\{ font-size:2cm; text-align: center; color: black; text-shadow: 0 0 4mm green\\}
-                 </style></head>
-                 <body>
-                 <h1>Greetings, Krusty! Total hits = {:d} </h1>
-                 <p> reading from file ... <br/>
-                 {:s}
-                </p>
-                 </body></html>\r\n", count, file_content);
+            if file_content == ~"index" {
 
-            stream.write(response.as_bytes());
-            println!("Connection terminates");
+                let index: ~str = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+                     <doctype !html><html><head><title>Hello, Rust!</title>
+                     <style>body \\{ background-color: \\#111; color: \\#FFEEAA \\}
+                            h1 \\{ font-size:2cm; text-align: center; color: black; text-shadow: 0 0 4mm red\\}
+                            h2 \\{ font-size:2cm; text-align: center; color: black; text-shadow: 0 0 4mm green\\}
+                     </style></head>
+                     <body>
+                     <h1>Greetings, Krusty! Total hits = {:d} </h1>
+                     </body></html>\r\n", count);
+
+                stream.write(index.as_bytes());
+                println!("Connection terminates");
+            }
+
+            else {
+                let response: ~str = format!("{:s}", file_content);
+
+                stream.write(response.as_bytes());
+                println!("Connection terminates");
+        }
+
             }
         }
     }
@@ -95,30 +103,61 @@ fn main() {
 
 fn readFile(x: &str) -> ~str {
 
-    println(x);   // for error checking
+    let y = x.slice_from(1).clone(); // get rid of leading '/'
+    let x = y.trim().clone();
 
-    let path = Path::new(x.slice_from(1));  // gets rid of leading '/'
+    if x == "" {
+        return ~"index";
+    }
+
+    let mut html = false;
+    let mut in_dir = false;
+
     
 
-    match (path.exists(), path.is_file()){
+
+    //testing to see if looking in same directory/if its an HTML file
+    let mut temp: ~[&str] = y.split('/').collect();
+    
+    if temp[0] != ""{
+        in_dir = true;
+    }
+
+
+    temp = y.split('.').collect();
+    if temp[temp.len()-1] == "html"{
+        html = true;
+    }
+
+    println!("{} {}", in_dir, html);
+
+    let path = Path::new(y); 
+
+    match (path.exists(), path.is_file(), html, in_dir){
         
-        (true,true) => {  
-            println("this is a file!");
+        (true,true, true, true) => {  
+
             match File::open(&Path::new(path)) {
+
                 Some(file) => {
                     let mut reader = BufferedReader::new(file);
                     let input = reader.read_to_str();
-                    println!("{:s}", input);
                     return input;
 
                 }
 
-                None =>{~"Opening file failed!"}
+                None =>{~"HTTP/1.1 500 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+                <h1> 500 ERROR </h1> <p> Something really bad happened, lo siento <p/>"}
             }
 
         }
-        (false,_) => {~"The item requested is not a file"}
-        (_,false) => {~"The item requested is not a file"}
-    }
+        (true,true,_,false) => {~"HTTP/1.1 403 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+                     <h1> 403 ERROR </h1> <p> Unauthorized access! <p>"}
 
+        (true,true,false,_) => {~"HTTP/1.1 403 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+                     <h1> 403 ERROR </h1> <p> Unauthorized access! <p>"}
+
+        (_,_,_,_) => {~"HTTP/1.1 404 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+                     <h1> 404 ERROR </h1> <p> Page not found <p>"}
+    }
 }
