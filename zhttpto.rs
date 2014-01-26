@@ -61,7 +61,6 @@ fn main() {
 
             
             let mut path = "";
-            println(line1);
 
             let temp: ~[&str] = line1.split(' ').collect();
             path = temp[1].clone(); // this gets the path
@@ -103,7 +102,13 @@ fn main() {
 
 fn readFile(x: &str) -> ~str {
 
-    let y = x.slice_from(1).clone(); // get rid of leading '/'
+    let mut y = x.slice_from(1).clone();
+    let z = x.slice(0,1).clone();
+    println(z);
+    if z != "/" {
+        y = x.clone(); 
+    }
+
     let x = y.trim().clone();
 
     if x == "" {
@@ -112,14 +117,11 @@ fn readFile(x: &str) -> ~str {
 
     let mut html = false;
     let mut in_dir = false;
-
     
-
-
-    //testing to see if looking in same directory/if its an HTML file
+    //testing to see if looking in allowed directory/if its an HTML file
     let mut temp: ~[&str] = y.split('/').collect();
     
-    if temp[0] != ""{
+    if temp[0] != "" && temp[0] != ".." {
         in_dir = true;
     }
 
@@ -128,8 +130,6 @@ fn readFile(x: &str) -> ~str {
     if temp[temp.len()-1] == "html"{
         html = true;
     }
-
-    println!("{} {}", in_dir, html);
 
     let path = Path::new(y); 
 
