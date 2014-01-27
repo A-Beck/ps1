@@ -104,7 +104,7 @@ fn readFile(x: &str) -> ~str {
 
     let mut y = x.slice_from(1).clone();
     let z = x.slice(0,1).clone();
-    println(z);
+    //println(z);
     if z != "/" {
         y = x.clone(); 
     }
